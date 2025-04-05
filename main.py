@@ -66,7 +66,7 @@ thread.start()
 
 def load_swear_words():
     with open("swear_words.txt", "r") as file:
-        phrases = file.read().split("\n")
+        phrases = file.read().split(", ")
     #del phrases[-1]
     #print(phrases)
     return phrases
@@ -169,7 +169,7 @@ async def add_word_command(ctx, word: str = None):
     word_lower = word.content.lower()
     phrases.append(word_lower)
     with open("swear_words.txt", "w") as file:
-        file.writelines(phrases)
+        file.write('\n'.join(phrases))
     await ctx.send("Banned phrases updated.")
     return
 
@@ -184,7 +184,7 @@ async def remove_word_command(ctx, word: str = None):
     word_lower = word.content.lower()
     phrases.remove(word_lower)
     with open("swear_words.txt", "w") as file:
-        file.writelines(phrases)
+        file.write('\n'.join(phrases))
     await ctx.send("Banned phrases updated")
     return
 
