@@ -141,8 +141,12 @@ async def change_tax_command(ctx, tax: str = None):
         await ctx.send("Please provide a number.")
         return
 
-    if tax < 0:
-        await ctx.send("Please provide a positive number.")
+    if tax > 10:
+        await ctx.send("Please provide a number less than 10")
+        return
+
+    if tax <= 0:
+        await ctx.send("Please provide a positive number that is more than 0.")
         return
 
     cost_modifier = tax
@@ -162,7 +166,8 @@ async def add_word_command(ctx, word: str = None):
         await ctx.send("Please provide a word. Usage: /add_word word")
         return
 
-    phrases.append(word)
+    word_lower = word.content.lower()
+    phrases.append(word_lower)
     with open("swear_words.txt", "w") as file:
         file.writelines(phrases)
     await ctx.send("Banned phrases updated.")
@@ -176,7 +181,8 @@ async def remove_word_command(ctx, word: str = None):
         await ctx.send("Please provide a word. Usage: /remove_word word")
         return
 
-    phrases.remove(word)
+    word_lower = word.content.lower()
+    phrases.remove(word_lower)
     with open("swear_words.txt", "w") as file:
         file.writelines(phrases)
     await ctx.send("Banned phrases updated")
