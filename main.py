@@ -66,7 +66,7 @@ thread.start()
 
 def load_swear_words():
     with open("swear_words.txt", "r") as file:
-        phrases = file.read().split(", ")
+        phrases = file.read().split("\n")
     #del phrases[-1]
     #print(phrases)
     return phrases
