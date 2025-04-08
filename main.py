@@ -6,6 +6,7 @@ from discord.ext import commands
 #from flask import Flask
 import threading
 import time
+import string
 from datetime import datetime
 
 cost_modifier = 1 #For example 1 for 1$ per word or 3 for 3 times the price
@@ -89,6 +90,7 @@ async def on_message(message):
     #print("2")
 
     message_lower = message.content.lower()
+    message_lower = message_lower.translate(str.maketrans('', '', string.punctuation))
     #print(message_lower.split())
 
     if "/add_word" in message_lower or "/remove_word" in message_lower:
