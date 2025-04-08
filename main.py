@@ -51,7 +51,7 @@ def save_word_counts():
 intents = discord.Intents.default()
 try:
     intents.message_content = True
-    print("Using message content intent - make sure it's enabled in Discord Developer Portal")
+    print("Using message content - make sure it's enabled in Discord Developer Portal")
 except:
     print("Message content intent not available - some features may be limited")
 
@@ -91,7 +91,7 @@ async def on_message(message):
     message_lower = message.content.lower()
     #print(message_lower.split())
 
-    if "/add_word" in message_lower:
+    if "/add_word" in message_lower or "/remove_word" in message_lower:
         return
 
     for word in message_lower.split():
@@ -102,11 +102,10 @@ async def on_message(message):
             #print(word)
             #print("4")
             count = message_lower.count(word)
-            await message.channel.send(word + " is not nice to say!")
+            await message.channel.send(word + " is not nice to say! \n You owe Panda. ☹️")
             user_id = str(message.author.id)
             user_word_counts[user_id][word] += count
             save_word_counts()
-            await message.channel.send("You owe Panda. ☹️")
             save_database()
             break
 
@@ -114,22 +113,19 @@ async def on_message(message):
             #print(word)
             pass
 
-@bot.command(name="reload")
-@commands.has_permissions(administrator=True)
-async def reload_command(ctx):
-    global phrases
-    phrases = load_swear_words()
-    await ctx.send("Reloaded swear words")
-    return
-
-@reload_command.error
-async def reload_command(ctx, error):
-    if isinstance(error, commands.MissingPermissions):
-        await ctx.send("You don't have permission to use this command.")
+@bot.command(name="help")
+async def help_command(ctx):
+    if ctx.author.guild_permissions.administrator:
+        await ctx.send("These are the commands you can run: \n /owe (username) \n /tax (value) \n /add_word (word) \n /remove_word (word)")
+    else:
+        await ctx.send("These are the commands you can run: \n /owe (username)")
 
 @bot.command(name="tax")
-@commands.has_permissions(administrator=True)
 async def change_tax_command(ctx, tax: str = None):
+    if ctx.author.guild_permissions.administrator != True:
+        await ctx.send("You don't have permissions to run this command.")
+        return
+
     global cost_modifier
     if tax is None:
         await ctx.send("Please provide a value. Usage: /tax (value)")
@@ -153,14 +149,12 @@ async def change_tax_command(ctx, tax: str = None):
     await ctx.send("Cost modifier changed to " + str(tax))
     return
 
-@change_tax_command.error
-async def change_tax_command(ctx, error):
-    if isinstance(error, commands.MissingPermissions):
-        await ctx.send("You don't have permission to use this command.")
-
 @bot.command(name="add_word")
-@commands.has_permissions(administrator=True)
 async def add_word_command(ctx, word: str = None):
+    if ctx.author.guild_permissions.administrator != True:
+        await ctx.send("You don't have permissions to run this command.")
+        return
+
     global phrases
     if word is None:
         await ctx.send("Please provide a word. Usage: /add_word word")
@@ -174,8 +168,11 @@ async def add_word_command(ctx, word: str = None):
     return
 
 @bot.command(name="remove_word")
-@commands.has_permissions(administrator=True)
 async def remove_word_command(ctx, word: str = None):
+    if ctx.author.guild_permissions.administrator != True:
+        await ctx.send("You don't have permissions to run this command.")
+        return
+
     global phrases
     if word is None:
         await ctx.send("Please provide a word. Usage: /remove_word word")
