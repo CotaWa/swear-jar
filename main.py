@@ -166,7 +166,7 @@ async def add_word_command(ctx, word: str = None):
         await ctx.send("Please provide a word. Usage: /add_word word")
         return
 
-    word_lower = word.content.lower()
+    word_lower = word.lower()
     phrases.append(word_lower)
     with open("swear_words.txt", "w") as file:
         file.write('\n'.join(phrases))
@@ -181,7 +181,7 @@ async def remove_word_command(ctx, word: str = None):
         await ctx.send("Please provide a word. Usage: /remove_word word")
         return
 
-    word_lower = word.content.lower()
+    word_lower = word.lower()
     phrases.remove(word_lower)
     with open("swear_words.txt", "w") as file:
         file.write('\n'.join(phrases))
