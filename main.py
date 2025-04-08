@@ -113,12 +113,12 @@ async def on_message(message):
             #print(word)
             pass
 
-@bot.command(name="help")
+@bot.command(name="swear_help")
 async def help_command(ctx):
     if ctx.author.guild_permissions.administrator:
-        await ctx.send("These are the commands you can run: \n /owe (username) \n /tax (value) \n /add_word (word) \n /remove_word (word)")
+        await ctx.send("These are the commands you can run: \n /swear_help \n /owe (username) \n /tax (value) \n /add_word (word) \n /remove_word (word)")
     else:
-        await ctx.send("These are the commands you can run: \n /owe (username)")
+        await ctx.send("These are the commands you can run: \n /swear_help \n /owe (username)")
 
 @bot.command(name="tax")
 async def change_tax_command(ctx, tax: str = None):
