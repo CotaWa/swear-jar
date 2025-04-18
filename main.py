@@ -93,11 +93,11 @@ async def on_message(message):
 
 @bot.command(name="swear_help")
 async def help_command(ctx):
-    if ctx.author.guild_permissions.administrator:
-        await ctx.send("These are the commands you can run: \n /swear_help \n /owe (username) \n /tax (value) \n /add_word (word) \n /remove_word (word)")
-        return
-    elif guild.get_role(1362743186845339800) in ctx.author.roles:
+    if ctx.guild.get_role(1362743186845339800) in ctx.author.roles:
         await ctx.send("These are the commands you can run: \n /swear_help \n /owe (username) \n /tax (value) \n /add_word (word) \n /remove_word (word) \n /add_debt (user) (amount) \n /remove_debt (user) (amount)")
+        return
+    elif ctx.author.guild_permissions.administrator:
+        await ctx.send("These are the commands you can run: \n /swear_help \n /owe (username) \n /tax (value) \n /add_word (word) \n /remove_word (value)")
         return
     else:
         await ctx.send("These are the commands you can run: \n /swear_help \n /owe (username)")
@@ -105,7 +105,7 @@ async def help_command(ctx):
 
 @bot.command(name="add_debt")
 async def add_debt_command(ctx, user: str = None, add: str = None):
-    if guild.get_role(1362743186845339800) in ctx.author.roles != True:
+    if (ctx.guild.get_role(1362743186845339800) in ctx.author.roles) == False:
         await ctx.send("You don't have permissions to run this command.")
         return
     if user == None:
@@ -124,17 +124,45 @@ async def add_debt_command(ctx, user: str = None, add: str = None):
 
     global user_word_counts
 
-    if user in user_word_counts:
-        user_word_counts[user] += add
+    if ctx.message.mentions:
+        target_user = ctx.message.mentions[0]
+    else:
+
+        target_user = None
+        if username.isdigit():
+            try:
+                target_user = await bot.fetch_user(int(username))
+                target_user = ctx.guild.get_member(target_user.id)
+            except:
+                target_user = None
+
+        if target_user is None:
+            for member in ctx.guild.members:
+                if username.lower() in member.name.lower() or (member.nick and username.lower() in member.nick.lower()):
+                    target_user = member
+                    break
+
+    if target_user is None:
+        await ctx.send(f"Could not find user with name '{username}'")
+        return
+
+    user_id = str(target_user.id)
+
+    if user_id in user_word_counts:
+        user_word_counts[user_id] += add
+        save_database(user_word_counts)
+        await ctx.send(f"Added ${add} to {target_user.display_name}'s debt.")
         return
 
     #If the user isn't in the database already we add them to the database
-    user_word_counts[user] = add
+    user_word_counts[user_id] = add
+    save_database(user_word_counts)
+    await ctx.send(f"Added ${add} to {target_user.display_name}'s debt.")
     return
 
 @bot.command(name="remove_debt")
 async def pay_debt_command(ctx, user: str = None, remove: str = None):
-    if guild.get_role(1362743186845339800) in ctx.author.roles != True:
+    if (ctx.guild.get_role(1362743186845339800) in ctx.author.roles) == False:
         await ctx.send("You don't have permissions to run this command.")
         return
     if user == None:
@@ -152,19 +180,45 @@ async def pay_debt_command(ctx, user: str = None, remove: str = None):
 
     global user_word_counts
 
-    if user not in user_word_counts:
-        await ctx.send("User has no debt to be payed off.")
+    if ctx.message.mentions:
+        target_user = ctx.message.mentions[0]
+    else:
+
+        target_user = None
+        if username.isdigit():
+            try:
+                target_user = await bot.fetch_user(int(username))
+                target_user = ctx.guild.get_member(target_user.id)
+            except:
+                target_user = None
+
+        if target_user is None:
+            for member in ctx.guild.members:
+                if username.lower() in member.name.lower() or (member.nick and username.lower() in member.nick.lower()):
+                    target_user = member
+                    break
+
+    if target_user is None:
+        await ctx.send(f"Could not find user with name '{username}'")
         return
-    if remove > user_word_counts[user]:
+
+    user_id = str(target_user.id)
+
+    if user_id not in user_word_counts:
+        await ctx.send(f"{target_user.display_name} has no debt to be payed off.")
+        return
+    if remove > user_word_counts[user_id]:
         await ctx.send("Can't remove more debt than the user has.")
         return
 
-    user_word_counts[user] -= remove
+    user_word_counts[user_id] -= remove
+    save_database(user_word_counts)
+    await ctx.send(f"Removed ${remove} from {target_user.display_name}'s debt.")
     return
 
 @bot.command(name="tax")
 async def change_tax_command(ctx, tax: str = None):
-    if ctx.author.guild_permissions.administrator != True:
+    if ctx.author.guild_permissions.administrator != True and ctx.guild.get_role(1362743186845339800) in ctx.author.roles != True:
         await ctx.send("You don't have permissions to run this command.")
         return
 
@@ -193,7 +247,7 @@ async def change_tax_command(ctx, tax: str = None):
 
 @bot.command(name="add_word")
 async def add_word_command(ctx, word: str = None):
-    if ctx.author.guild_permissions.administrator != True:
+    if ctx.author.guild_permissions.administrator != True and ctx.guild.get_role(1362743186845339800) in ctx.author.roles != True:
         await ctx.send("You don't have permissions to run this command.")
         return
 
@@ -211,7 +265,7 @@ async def add_word_command(ctx, word: str = None):
 
 @bot.command(name="remove_word")
 async def remove_word_command(ctx, word: str = None):
-    if ctx.author.guild_permissions.administrator != True:
+    if ctx.author.guild_permissions.administrator != True and ctx.guild.get_role(1362743186845339800) in ctx.author.roles != True:
         await ctx.send("You don't have permissions to run this command.")
         return
 
@@ -256,11 +310,10 @@ async def owe_command(ctx, username: str = None):
         return
 
     user_id = str(target_user.id)
-
     total = 0
+
     if user_id in user_word_counts:
-        for phrase, count in user_word_counts[user_id].items():
-            total += (count * cost_modifier)
+        total = user_word_counts[user_id] * cost_modifier
 
     message = f"**{target_user.display_name} owes Panda ${total}**"
 
