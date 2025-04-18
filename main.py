@@ -94,13 +94,18 @@ async def on_message(message):
 @bot.command(name="swear_help")
 async def help_command(ctx):
     if ctx.author.guild_permissions.administrator:
+        await ctx.send("These are the commands you can run: \n /swear_help \n /owe (username) \n /tax (value) \n /add_word (word) \n /remove_word (word)")
+        return
+    elif guild.get_role(1362743186845339800) in ctx.author.roles:
         await ctx.send("These are the commands you can run: \n /swear_help \n /owe (username) \n /tax (value) \n /add_word (word) \n /remove_word (word) \n /add_debt (user) (amount) \n /remove_debt (user) (amount)")
+        return
     else:
         await ctx.send("These are the commands you can run: \n /swear_help \n /owe (username)")
+        return
 
 @bot.command(name="add_debt")
 async def add_debt_command(ctx, user: str = None, add: str = None):
-    if ctx.author.guild_permissions.administrator != True:
+    if guild.get_role(1362743186845339800) in ctx.author.roles != True:
         await ctx.send("You don't have permissions to run this command.")
         return
     if user == None:
@@ -129,7 +134,7 @@ async def add_debt_command(ctx, user: str = None, add: str = None):
 
 @bot.command(name="remove_debt")
 async def pay_debt_command(ctx, user: str = None, remove: str = None):
-    if ctx.author.guild_permissions.administrator != True:
+    if guild.get_role(1362743186845339800) in ctx.author.roles != True:
         await ctx.send("You don't have permissions to run this command.")
         return
     if user == None:
