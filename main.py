@@ -4,7 +4,7 @@ import json
 from collections import defaultdict
 from discord.ext import commands
 #from flask import Flask
-import threading
+#import threading
 import time
 import string
 from datetime import datetime
@@ -12,42 +12,21 @@ from datetime import datetime
 cost_modifier = 1 #For example 1 for 1$ per word or 3 for 3 times the price
 save_interval = 600 #In seconds
 
-def save_database():
+def save_database(data):
 #    while True:
 #        now = datetime.now()
     with open("data.json", "w") as fp:
-        json.dump(db, fp)
+        json.dump(data, fp)
 #        print("Saved data to file at " + str(now))
 #        time.sleep(save_interval)
 
 def load_database():
 	dictionary = {}
 	with open("data.json", "r") as fp:
-		raw_data = fp.read()
-		print(raw_data)
-		dictionary = json.loads(raw_data)
+		dictionary = json.load(fp)
 	return dictionary
 
-def get_nested_defaultdict():
-    result = defaultdict(lambda: defaultdict(int))
-    if "user_word_counts" in db:
-        stored_data = json.loads(db["user_word_counts"])
-        for user_id, word_dict in stored_data.items():
-            for word, count in word_dict.items():
-                result[user_id][word] = count
-    return result
-
-db = load_database()
-
-user_word_counts = get_nested_defaultdict()
-
-
-def save_word_counts():
-    data_to_save = {}
-    for user_id, word_dict in user_word_counts.items():
-        data_to_save[user_id] = dict(word_dict)
-
-    db["user_word_counts"] = json.dumps(data_to_save)
+user_word_counts = load_database()
 
 intents = discord.Intents.default()
 try:
@@ -62,8 +41,6 @@ bot = commands.Bot(command_prefix='/', intents=intents)
 phrases = []
 #phrases = ["fuck", "shit", "cunt", "kys", "bitch", "dickhead", "dick", "asshole", "ass", "bastard", "hawk tuah", "pussy", "moist", "halgean", "aeriki", "penis", "sex", "cock", "vagina", "porn", "bahoosay", "poosay", "lindau", "tandong", "tanderium", "ooo.ooo", "aaa.aaa"]
 
-thread = threading.Thread(target=save_database, daemon=True)
-thread.start()
 
 def load_swear_words():
     with open("swear_words.txt", "r") as file:
@@ -106,9 +83,8 @@ async def on_message(message):
             count = message_lower.count(word)
             await message.channel.send(word + " is not nice to say! \n You owe Panda. ☹️")
             user_id = str(message.author.id)
-            user_word_counts[user_id][word] += count
-            save_word_counts()
-            save_database()
+            user_word_counts[user_id] += count
+            save_database(user_word_counts)
             break
 
         except ValueError:
@@ -118,9 +94,68 @@ async def on_message(message):
 @bot.command(name="swear_help")
 async def help_command(ctx):
     if ctx.author.guild_permissions.administrator:
-        await ctx.send("These are the commands you can run: \n /swear_help \n /owe (username) \n /tax (value) \n /add_word (word) \n /remove_word (word)")
+        await ctx.send("These are the commands you can run: \n /swear_help \n /owe (username) \n /tax (value) \n /add_word (word) \n /remove_word (word) \n /add_debt (user) (amount) \n /remove_debt (user) (amount)")
     else:
         await ctx.send("These are the commands you can run: \n /swear_help \n /owe (username)")
+
+@bot.command(name="add_debt")
+async def add_debt_command(ctx, user: str = None, add: str = None):
+    if ctx.author.guild_permissions.administrator != True:
+        await ctx.send("You don't have permissions to run this command.")
+        return
+    if user == None:
+        await ctx.send("Please provide user.")
+        return
+    if add == None:
+        await ctx.send("Please provide a number")
+        return
+    try:
+        add = int(add)
+    except:
+        await ctx.send("Please provide a number.")
+    if add <= 0:
+        await ctx.send("Please provide an integer that is bigger than 0.")
+        return
+
+    global user_word_counts
+
+    if user in user_word_counts:
+        user_word_counts[user] += add
+        return
+
+    #If the user isn't in the database already we add them to the database
+    user_word_counts[user] = add
+    return
+
+@bot.command(name="remove_debt")
+async def pay_debt_command(ctx, user: str = None, remove: str = None):
+    if ctx.author.guild_permissions.administrator != True:
+        await ctx.send("You don't have permissions to run this command.")
+        return
+    if user == None:
+        await ctx.send("Please provide user.")
+        return
+    if remove == None:
+        await ctx.send("Please provide a positive number more than 0.")
+        return
+    try:
+        remove = int(remove)
+    except:
+        await ctx.send("Please provide a number.")
+    if remove <= 0:
+        await ctx.send("Please provide an integer that is bigger than 0.")
+
+    global user_word_counts
+
+    if user not in user_word_counts:
+        await ctx.send("User has no debt to be payed off.")
+        return
+    if remove > user_word_counts[user]:
+        await ctx.send("Can't remove more debt than the user has.")
+        return
+
+    user_word_counts[user] -= remove
+    return
 
 @bot.command(name="tax")
 async def change_tax_command(ctx, tax: str = None):
@@ -136,7 +171,7 @@ async def change_tax_command(ctx, tax: str = None):
     try:
         tax = int(tax)
     except:
-        await ctx.send("Please provide a number.")
+        await ctx.send("Please provide an integer.")
         return
 
     if tax > 10:
