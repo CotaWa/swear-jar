@@ -3,22 +3,17 @@ import os
 import json
 from collections import defaultdict
 from discord.ext import commands
-#from flask import Flask
-#import threading
-import time
 import string
 from datetime import datetime
 
 cost_modifier = 1 #For example 1 for 1$ per word or 3 for 3 times the price
-save_interval = 600 #In seconds
 
 def save_database(data):
-#    while True:
-#        now = datetime.now()
+    global users
+    users = {user: value for user, value in data.items() if value > 0}
+    data = {user: value for user, value in users.items() if value > 0}
     with open("data.json", "w") as fp:
         json.dump(data, fp)
-#        print("Saved data to file at " + str(now))
-#        time.sleep(save_interval)
 
 def load_database():
 	dictionary = {}
@@ -26,7 +21,18 @@ def load_database():
 		dictionary = json.load(fp)
 	return dictionary
 
+def load_users():
+    users = {}
+    with open("users.json", "r") as fp:
+        users = json.load(fp)
+    return users
+
+def save_users(data):
+    with open("users.json", "w") as fp:
+        json.dump(data, fp)
+
 user_word_counts = load_database()
+users = load_users()
 
 intents = discord.Intents.default()
 try:
@@ -38,48 +44,39 @@ except:
 bot = commands.Bot(command_prefix='/', intents=intents)
 
 
-phrases = []
-#phrases = ["fuck", "shit", "cunt", "kys", "bitch", "dickhead", "dick", "asshole", "ass", "bastard", "hawk tuah", "pussy", "moist", "halgean", "aeriki", "penis", "sex", "cock", "vagina", "porn", "bahoosay", "poosay", "lindau", "tandong", "tanderium", "ooo.ooo", "aaa.aaa"]
-
-
 def load_swear_words():
+    phrases = []
     with open("swear_words.txt", "r") as file:
         phrases = file.read().split("\n")
-    #del phrases[-1]
-    #print(phrases)
     return phrases
 
 phrases = load_swear_words()
-print(phrases)
 
 @bot.event
 async def on_ready():
+    total = 0
+    for keys in user_word_counts:
+        total += user_word_counts[keys]
     print(f"Logged in as {bot.user}")
-    print(f"Loaded {sum(len(words) for words in user_word_counts.values())} word counts from database")
+    print(f"Loaded {total} word counts from database")
 
 @bot.event
 async def on_message(message):
-    #print("1")
     if message.author == bot.user:
         return
 
     await bot.process_commands(message)
-    #print("2")
 
     message_lower = message.content.lower()
     message_lower = message_lower.translate(str.maketrans('', '', string.punctuation))
-    #print(message_lower.split())
 
     if "/add_word" in message_lower or "/remove_word" in message_lower:
         return
 
     for word in message_lower.split():
-        #print("3")
 
         try:
             index = phrases.index(word)
-            #print(word)
-            #print("4")
             count = message_lower.count(word)
             await message.channel.send(word + " is not nice to say! \n You owe Panda. ☹️")
             user_id = str(message.author.id)
@@ -88,20 +85,44 @@ async def on_message(message):
             break
 
         except ValueError:
-            #print(word)
             pass
 
 @bot.command(name="swear_help")
 async def help_command(ctx):
     if ctx.guild.get_role(1362743186845339800) in ctx.author.roles:
-        await ctx.send("These are the commands you can run: \n /swear_help \n /owe (username) \n /tax (value) \n /add_word (word) \n /remove_word (word) \n /add_debt (user) (amount) \n /remove_debt (user) (amount)")
+        await ctx.send("These are the commands you can run: \n /swear_help \n /owe (username) \n /tax (value) \n /add_word (word) \n /remove_word (word) \n /add_debt (user) (amount) \n /remove_debt (user) (amount) \n /swear_total \n /swear_leaderboard")
         return
     elif ctx.author.guild_permissions.administrator:
-        await ctx.send("These are the commands you can run: \n /swear_help \n /owe (username) \n /tax (value) \n /add_word (word) \n /remove_word (value)")
+        await ctx.send("These are the commands you can run: \n /swear_help \n /owe (username) \n /tax (value) \n /add_word (word) \n /remove_word (value) \n /swear_total \n /swear_leaderboard")
         return
     else:
-        await ctx.send("These are the commands you can run: \n /swear_help \n /owe (username)")
+        await ctx.send("These are the commands you can run: \n /swear_help \n /owe (username) \n /swear_total \n /swear_leaderboard")
         return
+
+@bot.command(name="swear_total")
+async def total_debt_command(ctx):
+    total = 0
+    for user in user_word_counts:
+        total += user_word_counts[user] * cost_modifier
+    await ctx.send(f"Total amount of swear debt is ${total}")
+
+@bot.command(name="swear_leaderboard")
+async def leaderboard_command(ctx):
+    global users
+    sorted_db = {}
+    for user in sorted(user_word_counts, key=user_word_counts.get):
+        sorted_db[user] = user_word_counts[user]
+    strings = []
+    user_ids = list(sorted_db.keys())
+    user_ids.reverse()
+    for user in user_ids:
+        target_user = users.get(user, None)
+        if target_user == None:
+            target_user = await ctx.guild.fetch_member(user)
+            users[user] = target_user.name
+            save_users(users)
+        strings.append(f"{target_user} owes ${sorted_db[user]}")
+    await ctx.send('\n'.join(strings))
 
 @bot.command(name="add_debt")
 async def add_debt_command(ctx, user: str = None, add: str = None):
@@ -150,7 +171,7 @@ async def add_debt_command(ctx, user: str = None, add: str = None):
 
     if user_id in user_word_counts:
         user_word_counts[user_id] += add
-        save_database(user_word_counts)
+        save_database(user.r_word_counts)
         await ctx.send(f"Added ${add} to {target_user.display_name}'s debt.")
         return
 
@@ -321,22 +342,6 @@ async def owe_command(ctx, username: str = None):
         message += "\nGood boy."
 
     await ctx.send(message)
-
-#app = Flask('')
-
-#@app.route('/')
-#def home():
-#    return "Discord bot is running!"
-
-#def run():
-#    app.run(host='0.0.0.0', port=9090)
-
-#def keep_alive():
-#    t = Thread(target=run)
-#    t.start()
-
-
-#keep_alive()
 
 try:
     token = os.environ['TOKEN']
