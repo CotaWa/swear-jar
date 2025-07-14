@@ -53,7 +53,7 @@ def load_commands():
 
 user_word_counts = load_database()
 users = load_users()
-commands = load_commands()
+bot_commands = load_commands()
 
 intents = discord.Intents.default()
 try:
@@ -101,17 +101,17 @@ async def on_message(message):
 async def help_command(ctx):
     available_commands = []
     if ctx.guild.get_role() in ctx.author.roles:
-        for command in commands:
-            if "manager" in commands[command]:
+        for command in bot_commands:
+            if "manager" in bot_commands[command]:
                 available_commands.append(f"{command}\n")
     elif ctx.author.guild_permissions.administrator:
-        for command in commands:
-            if "admin" in commands[command]:
+        for command in bot_commands:
+            if "admin" in bot_commands[command]:
                 available_commands.append(f"{command}\n")
             available_commands.append(f"{command}\n")
     else:
-        for command in commands:
-            if "user" in commands[command]:
+        for command in bot_commands:
+            if "user" in bot_commands[command]:
                 available_commands.append(f"{command}\n")
 
     await ctx.send(f"These are the commands you can run: \n {''.join(available_commands)}")
