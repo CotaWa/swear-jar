@@ -87,7 +87,7 @@ async def on_message(message):
     message = message.translate(str.maketrans('', '', string.punctuation))
 
     for word in message.split():
-        try:
+        if word in phrases:
             owed = message.count(word) * phrases[word]
             await message.channel.send(f"{word} is not nice to say! \n You owe Panda ${owed * cost_modifier}. ☹️")
             user_id = str(message.author.id)
@@ -96,10 +96,6 @@ async def on_message(message):
             else:
                 user_word_counts[user_id] = owed
             save_database(user_word_counts)
-            break
-
-        except ValueError:
-            pass
 
 @bot.command(name="swear_help")
 async def help_command(ctx):
