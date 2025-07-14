@@ -21,15 +21,25 @@ def load_database():
 		dictionary = json.load(fp)
 	return dictionary
 
+def save_swear_words(phrases):
+    with open("swear_words.json", "w") as file:
+        json.dump(phrases, file)
+
+def load_swear_words():
+    phrases = {}
+    with open("swear_words.json", "r") as file:
+        phrases = json.load(file)
+    return phrases
+
+def save_users(data):
+    with open("users.json", "w") as fp:
+        json.dump(data, fp)
+
 def load_users():
     users = {}
     with open("users.json", "r") as fp:
         users = json.load(fp)
     return users
-
-def save_users(data):
-    with open("users.json", "w") as fp:
-        json.dump(data, fp)
 
 user_word_counts = load_database()
 users = load_users()
@@ -43,13 +53,6 @@ except:
 
 bot = commands.Bot(command_prefix='/', intents=intents)
 
-
-def load_swear_words():
-    phrases = []
-    with open("swear_words.txt", "r") as file:
-        phrases = file.read().split("\n")
-    return phrases
-
 phrases = load_swear_words()
 
 @bot.event
@@ -62,9 +65,7 @@ async def on_ready():
 
 @bot.event
 async def on_message(message):
-    if message.author == bot.user:
-        return
-    if message.author.id == 1259277906195251302:
+    if message.author == bot.user or message.author.id == 1259277906195251302:
         return
 
     await bot.process_commands(message)
@@ -75,16 +76,14 @@ async def on_message(message):
     message_lower = message_lower.translate(str.maketrans('', '', string.punctuation))
 
     for word in message_lower.split():
-
         try:
-            index = phrases.index(word)
-            count = message_lower.count(word)
-            await message.channel.send(word + " is not nice to say! \n You owe Panda. ☹️")
+            owed = message_lower.count(word) * phrases[word]
+            await message.channel.send(f"{word} is not nice to say! \n You owe Panda ${owed * cost_modifier}. ☹️")
             user_id = str(message.author.id)
             if user_id in user_word_counts:
-                user_word_counts[user_id] += count
+                user_word_counts[user_id] += owed
             else:
-                user_word_counts[user_id] = count
+                user_word_counts[user_id] = owed
             save_database(user_word_counts)
             break
 
@@ -283,22 +282,48 @@ async def change_tax_command(ctx, tax: str = None):
     return
 
 @bot.command(name="add_word")
-async def add_word_command(ctx, word: str = None):
+async def add_word_command(ctx, word: str = None, price: int = None):
     if ctx.author.guild_permissions.administrator != True and ctx.guild.get_role(1362743186845339800) in ctx.author.roles != True:
         await ctx.send("You don't have permissions to run this command.")
         return
 
     global phrases
     if word is None:
-        await ctx.send("Please provide a word. Usage: /add_word word")
+        await ctx.send("Please provide a word. Usage: /add_word word price")
+        return
+    
+    if price is None:
+        await ctx.send("Please provide a worth. Usage: /add_word word price")
         return
 
-    word_lower = word.lower()
-    phrases.append(word_lower)
-    with open("swear_words.txt", "w") as file:
-        file.write('\n'.join(phrases))
+    word = word.lower()
+    phrases[word] = price
+    save_swear_words(phrases)
     await ctx.send("Banned phrases updated.")
     return
+
+@bot.command(name="edit_word")
+async def edit_word_command(ctx, word: str = None, price: int = None):
+    if ctx.author.guild_permissions.administrator != True and ctx.guild.get_role(1362743186845339800) in ctx.author.roles != True:
+        await ctx.send("You don't have permissions to run this command.")
+        return
+
+    global phrases
+    if word is None:
+        await ctx.send("Please provide a word. Usage: /edit_word word price")
+        return
+
+    if price is None:
+        await ctx.send("Please provide a new price. Usage: /edit_word word price")
+        return
+
+    word = word.lower()
+    if word not in phrases:
+        await ctx.send(f"'{word}' was not found in banned phrases.")
+        return
+    phrases[word] = price
+    save_swear_words(phrases)
+    await ctx.send(f"Updated '{word}' to ${price}")
 
 @bot.command(name="remove_word")
 async def remove_word_command(ctx, word: str = None):
@@ -311,11 +336,14 @@ async def remove_word_command(ctx, word: str = None):
         await ctx.send("Please provide a word. Usage: /remove_word word")
         return
 
-    word_lower = word.lower()
-    phrases.remove(word_lower)
-    with open("swear_words.txt", "w") as file:
-        file.write('\n'.join(phrases))
-    await ctx.send("Banned phrases updated")
+    word = word.lower()
+    result = phrases.pop(word, None)
+    if result is not None:
+        await ctx.send(f"Removed '{word}' from banned phrases.")
+    else:
+        await ctx.send(f"'{word}' was not found in banned phrases.")
+        return
+    save_swear_words(phrases)
     return
 
 @bot.command(name="owe")
@@ -330,17 +358,18 @@ async def owe_command(ctx, username: str = None):
 
         target_user = None
         if username.isdigit():
-            try:
-                target_user = await bot.fetch_user(int(username))
-                target_user = ctx.guild.get_member(target_user.id)
-            except:
-                target_user = None
-
-        if target_user is None:
-            for member in ctx.guild.members:
-                if username.lower() in member.name.lower() or (member.nick and username.lower() in member.nick.lower()):
-                    target_user = member
-                    break
+            target_user = users.get(username, None)
+            if target_user == None or not isinstance(target_user, str):
+                try:
+                    target_user = await ctx.guild.fetch_member(username)
+                    target_user = target_user.name
+                    users[username] = str(target_user)
+                    save_users(users)
+                except Exception:
+                    del users[username]
+                    del user_word_counts[username]
+                    save_users(users)
+                    save_database(user_word_counts)
 
     if target_user is None:
         await ctx.send(f"Could not find user with name '{username}'")

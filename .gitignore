@@ -1,3 +1,2 @@
 .env
-data.json
-swear_words.txt
+*.json
