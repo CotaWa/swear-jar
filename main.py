@@ -100,7 +100,7 @@ async def on_message(message):
 @bot.command(name="swear_help")
 async def help_command(ctx):
     available_commands = []
-    if ctx.guild.get_role() in ctx.author.roles:
+    if ctx.guild.get_role(swear_jar_manager_role) in ctx.author.roles:
         for command in bot_commands:
             if "manager" in bot_commands[command]:
                 available_commands.append(f"{command}\n")
