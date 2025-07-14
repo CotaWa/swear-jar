@@ -64,14 +64,15 @@ async def on_ready():
 async def on_message(message):
     if message.author == bot.user:
         return
+    if message.author.id == 1259277906195251302:
+        return
 
     await bot.process_commands(message)
+    if message.content.startswith('/'):
+        return
 
     message_lower = message.content.lower()
     message_lower = message_lower.translate(str.maketrans('', '', string.punctuation))
-
-    if "/add_word" in message_lower or "/remove_word" in message_lower:
-        return
 
     for word in message_lower.split():
 
@@ -80,7 +81,10 @@ async def on_message(message):
             count = message_lower.count(word)
             await message.channel.send(word + " is not nice to say! \n You owe Panda. ☹️")
             user_id = str(message.author.id)
-            user_word_counts[user_id] += count
+            if user_id in user_word_counts:
+                user_word_counts[user_id] += count
+            else:
+                user_word_counts[user_id] = count
             save_database(user_word_counts)
             break
 
@@ -108,20 +112,32 @@ async def total_debt_command(ctx):
 
 @bot.command(name="swear_leaderboard")
 async def leaderboard_command(ctx):
+    global user_word_counts
     global users
     sorted_db = {}
     for user in sorted(user_word_counts, key=user_word_counts.get):
-        sorted_db[user] = user_word_counts[user]
-    strings = []
+        sorted_db[str(user)] = user_word_counts[user]
     user_ids = list(sorted_db.keys())
     user_ids.reverse()
+
+    strings = []
     for user in user_ids:
         target_user = users.get(user, None)
-        if target_user == None:
-            target_user = await ctx.guild.fetch_member(user)
-            users[user] = target_user.name
-            save_users(users)
+        if target_user == None or not isinstance(target_user, str):
+            try:
+                target_user = await ctx.guild.fetch_member(user)
+                target_user = target_user.name
+                users[user] = str(target_user)
+                save_users(users)
+            except Exception:
+                del users[user]
+                del user_word_counts[user]
+                save_users(users)
+                save_database(user_word_counts)
+                continue
         strings.append(f"{target_user} owes ${sorted_db[user]}")
+
+
     await ctx.send('\n'.join(strings))
 
 @bot.command(name="add_debt")
@@ -305,7 +321,7 @@ async def remove_word_command(ctx, word: str = None):
 @bot.command(name="owe")
 async def owe_command(ctx, username: str = None):
     if username is None:
-        await ctx.send("Please provide a username. Usage: /owe username")
+        await ctx.send("Please provide a username. Usage: /owe @username")
         return
 
     if ctx.message.mentions:
