@@ -8,6 +8,8 @@ from datetime import datetime
 
 cost_modifier = 1 #For example 1 for 1$ per word or 3 for 3 times the price
 
+swear_jar_manager_role = 1362743186845339800 #ID of the role that can manage swear jar
+
 def save_database(data):
     global users
     users = {user: value for user, value in data.items() if value > 0}
@@ -41,8 +43,17 @@ def load_users():
         users = json.load(fp)
     return users
 
+def load_commands():
+    commands = {}
+    with open("commands.json", "r") as fp:
+        commands = json.load(fp)
+    for key, perms in commands.items():
+        commands[key] = perms.translate(str.maketrans('', '', string.punctuation))
+    return commands
+
 user_word_counts = load_database()
 users = load_users()
+commands = load_commands()
 
 intents = discord.Intents.default()
 try:
@@ -72,12 +83,12 @@ async def on_message(message):
     if message.content.startswith('/'):
         return
 
-    message_lower = message.content.lower()
-    message_lower = message_lower.translate(str.maketrans('', '', string.punctuation))
+    message = message.content.lower()
+    message = message.translate(str.maketrans('', '', string.punctuation))
 
-    for word in message_lower.split():
+    for word in message.split():
         try:
-            owed = message_lower.count(word) * phrases[word]
+            owed = message.count(word) * phrases[word]
             await message.channel.send(f"{word} is not nice to say! \n You owe Panda ${owed * cost_modifier}. ☹️")
             user_id = str(message.author.id)
             if user_id in user_word_counts:
@@ -92,15 +103,22 @@ async def on_message(message):
 
 @bot.command(name="swear_help")
 async def help_command(ctx):
-    if ctx.guild.get_role(1362743186845339800) in ctx.author.roles:
-        await ctx.send("These are the commands you can run: \n /swear_help \n /owe (username) \n /tax (value) \n /add_word (word) \n /remove_word (word) \n /add_debt (user) (amount) \n /remove_debt (user) (amount) \n /swear_total \n /swear_leaderboard")
-        return
+    available_commands = []
+    if ctx.guild.get_role() in ctx.author.roles:
+        for command in commands:
+            if "manager" in commands[command]:
+                available_commands.append(f"{command}\n")
     elif ctx.author.guild_permissions.administrator:
-        await ctx.send("These are the commands you can run: \n /swear_help \n /owe (username) \n /tax (value) \n /add_word (word) \n /remove_word (value) \n /swear_total \n /swear_leaderboard")
-        return
+        for command in commands:
+            if "admin" in commands[command]:
+                available_commands.append(f"{command}\n")
+            available_commands.append(f"{command}\n")
     else:
-        await ctx.send("These are the commands you can run: \n /swear_help \n /owe (username) \n /swear_total \n /swear_leaderboard")
-        return
+        for command in commands:
+            if "user" in commands[command]:
+                available_commands.append(f"{command}\n")
+
+    await ctx.send(f"These are the commands you can run: \n {''.join(available_commands)}")
 
 @bot.command(name="swear_total")
 async def total_debt_command(ctx):
@@ -141,7 +159,7 @@ async def leaderboard_command(ctx):
 
 @bot.command(name="add_debt")
 async def add_debt_command(ctx, user: str = None, add: str = None):
-    if (ctx.guild.get_role(1362743186845339800) in ctx.author.roles) == False:
+    if (ctx.guild.get_role(swear_jar_manager_role) in ctx.author.roles) == False:
         await ctx.send("You don't have permissions to run this command.")
         return
     if user == None:
@@ -198,7 +216,7 @@ async def add_debt_command(ctx, user: str = None, add: str = None):
 
 @bot.command(name="remove_debt")
 async def pay_debt_command(ctx, user: str = None, remove: str = None):
-    if (ctx.guild.get_role(1362743186845339800) in ctx.author.roles) == False:
+    if (ctx.guild.get_role(swear_jar_manager_role) in ctx.author.roles) == False:
         await ctx.send("You don't have permissions to run this command.")
         return
     if user == None:
@@ -254,7 +272,7 @@ async def pay_debt_command(ctx, user: str = None, remove: str = None):
 
 @bot.command(name="tax")
 async def change_tax_command(ctx, tax: str = None):
-    if ctx.author.guild_permissions.administrator != True and ctx.guild.get_role(1362743186845339800) in ctx.author.roles != True:
+    if ctx.author.guild_permissions.administrator != True and ctx.guild.get_role(swear_jar_manager_role) in ctx.author.roles != True:
         await ctx.send("You don't have permissions to run this command.")
         return
 
@@ -283,7 +301,7 @@ async def change_tax_command(ctx, tax: str = None):
 
 @bot.command(name="add_word")
 async def add_word_command(ctx, word: str = None, price: int = None):
-    if ctx.author.guild_permissions.administrator != True and ctx.guild.get_role(1362743186845339800) in ctx.author.roles != True:
+    if ctx.author.guild_permissions.administrator != True and ctx.guild.get_role(swear_jar_manager_role) in ctx.author.roles != True:
         await ctx.send("You don't have permissions to run this command.")
         return
 
@@ -304,7 +322,7 @@ async def add_word_command(ctx, word: str = None, price: int = None):
 
 @bot.command(name="edit_word")
 async def edit_word_command(ctx, word: str = None, price: int = None):
-    if ctx.author.guild_permissions.administrator != True and ctx.guild.get_role(1362743186845339800) in ctx.author.roles != True:
+    if ctx.author.guild_permissions.administrator != True and ctx.guild.get_role(swear_jar_manager_role) in ctx.author.roles != True:
         await ctx.send("You don't have permissions to run this command.")
         return
 
@@ -327,7 +345,7 @@ async def edit_word_command(ctx, word: str = None, price: int = None):
 
 @bot.command(name="remove_word")
 async def remove_word_command(ctx, word: str = None):
-    if ctx.author.guild_permissions.administrator != True and ctx.guild.get_role(1362743186845339800) in ctx.author.roles != True:
+    if ctx.author.guild_permissions.administrator != True and ctx.guild.get_role(swear_jar_manager_role) in ctx.author.roles != True:
         await ctx.send("You don't have permissions to run this command.")
         return
 

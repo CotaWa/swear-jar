@@ -1,0 +1,12 @@
+{
+    "/swear_help":          "manager, admin, user",
+    "/owe":                 "manager, admin, user",
+    "/tax":                 "manager, admin, user",
+    "/add_word":            "manager, admin",
+    "/edit_word":           "manager, admin",
+    "/remove_word":         "manager, admin",
+    "/add_debt":            "manager",
+    "/remove_debt":         "manager",
+    "/swear_total":         "manager, admin, user",
+    "/swear_leaderboard":   "manager, admin, user"
+}
