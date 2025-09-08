@@ -6,3 +6,6 @@ To add a swear word you can run "/add_word {word} {price}". To remove you run "/
 There are more commands that you can check out by using "/swear_help" to get a list of available commands.
 
 Before running, you may want to edit the "swear_jar_manager_role" variable to the correspondig ID for the role in your discord server. The role gives access to a couple more commands than other users, that may or may not be important.
+
+
+I thank my friend Kiri for the creation of the bot and the idea of how to make it.
