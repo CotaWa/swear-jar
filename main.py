@@ -15,7 +15,7 @@ def save_database(data):
     global users
     users = {user: value for user, value in data.items() if value > 0}
     data = {user: value for user, value in users.items() if value > 0}
-    with open("data.json", "w") as fp:
+    with open("/db/data.json", "w") as fp:
         json.dump(data, fp)
 
 def load_database():
@@ -25,28 +25,28 @@ def load_database():
 	return dictionary
 
 def save_swear_words(phrases):
-    with open("swear_words.json", "w") as file:
+    with open("/db/swear_words.json", "w") as file:
         json.dump(phrases, file)
 
 def load_swear_words():
     phrases = {}
-    with open("swear_words.json", "r") as file:
+    with open("/db/swear_words.json", "r") as file:
         phrases = json.load(file)
     return phrases
 
 def save_users(data):
-    with open("users.json", "w") as fp:
+    with open("/db/users.json", "w") as fp:
         json.dump(data, fp)
 
 def load_users():
     users = {}
-    with open("users.json", "r") as fp:
+    with open("/db/users.json", "r") as fp:
         users = json.load(fp)
     return users
 
 def load_commands():
     commands = {}
-    with open("commands.json", "r") as fp:
+    with open("/db/commands.json", "r") as fp:
         commands = json.load(fp)
     for key, perms in commands.items():
         commands[key] = perms.translate(str.maketrans('', '', string.punctuation))
