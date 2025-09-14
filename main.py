@@ -80,6 +80,7 @@ async def on_message(message):
     if message.author == bot.user or message.author.id == 1259277906195251302:
         return
 
+    user_id = str(message.author.id)
     await bot.process_commands(message)
     if message.content.startswith('/'):
         return
@@ -93,7 +94,6 @@ async def on_message(message):
             word = match[0]
             owed = message.count(word) * phrases[word]
             await message.channel.send(f"{word} is not nice to say! \n You owe Panda ${owed * cost_modifier}. ☹️")
-            user_id = str(message.author.id)
             if user_id in user_word_counts:
                 user_word_counts[user_id] += owed
             else:
