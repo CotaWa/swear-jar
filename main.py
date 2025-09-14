@@ -93,7 +93,7 @@ async def on_message(message):
         match = process.extractOne(word, phrases.keys(), scorer=fuzz.ratio, score_cutoff=80)
         if match:
             word = match[0]
-            owed = message.count(word) * phrases[word]
+            owed = phrases[word]
             await channel.send(f"{word} is not nice to say! \n You owe Panda ${owed * cost_modifier}. ☹️")
             if user_id in user_word_counts:
                 user_word_counts[user_id] += owed
