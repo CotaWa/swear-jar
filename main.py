@@ -5,6 +5,7 @@ from collections import defaultdict
 from discord.ext import commands
 import string
 from datetime import datetime
+from rapidfuzz import fuzz, process
 
 cost_modifier = 1 #For example 1 for 1$ per word or 3 for 3 times the price
 
@@ -87,7 +88,9 @@ async def on_message(message):
     message = message.translate(str.maketrans('', '', string.punctuation))
 
     for word in message.split():
-        if word in phrases:
+        match = process.extractOne(word, phrases.keys(), scorer=fuzz.ratio, score_cutoff=80)
+        if match:
+            word = match[0]
             owed = message.count(word) * phrases[word]
             await message.channel.send(f"{word} is not nice to say! \n You owe Panda ${owed * cost_modifier}. ☹️")
             user_id = str(message.author.id)
