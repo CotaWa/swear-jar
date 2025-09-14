@@ -20,7 +20,7 @@ def save_database(data):
 
 def load_database():
 	dictionary = {}
-	with open("data.json", "r") as fp:
+	with open("/db/data.json", "r") as fp:
 		dictionary = json.load(fp)
 	return dictionary
 
